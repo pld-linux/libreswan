@@ -1,69 +1,90 @@
 # TODO:
-# - openswan.init needs update for 2.6.x
+# - libreswan.init needs update for 2.6.x and above
 # - warning: Installed (but unpackaged) file(s) found:
-#   /usr/share/doc/openswan/index.html
-#   /usr/share/doc/openswan/ipsec.conf-sample
+#   /usr/share/doc/libreswan/index.html
+#   /usr/share/doc/libreswan/ipsec.conf-sample
 #
-# NOTE:
+# NOTE (TODO: check validity for current libreswan):
 # - 32-bit tncfg and starter won't work on 64-bit kernels because of FUBAR
 #   ioctls (only ifru_data pointer is supported in 32->64 conversion of
 #   SIOCDEVPRIV ioctl, but openswan puts some static data in structure there)
 #
 Summary:	Open Source implementation of IPsec for the Linux operating system
 Summary(pl.UTF-8):	Otwarta implementacja IPseca dla systemu operacyjnego Linux
-Name:		openswan
-Version:	2.6.48
+Name:		libreswan
+Version:	3.17
 Release:	0.1
-License:	GPL v2+ (main parts), BSD (DES and radij code)
+License:	GPL v2 with linking permission, BSD (DES and radij code)
 Group:		Networking/Daemons
-Source0:	https://download.openswan.org/openswan/%{name}-%{version}.tar.gz
-# Source0-md5:	9d3309bb7217041cd7f336a1336773ef
+Source0:	https://download.libreswan.org/%{name}-%{version}.tar.gz
+# Source0-md5:	a37ce71229d491f30926788565f82e16
 Source1:	%{name}.init
-Patch0:		%{name}-prefix.patch
-Patch1:		%{name}-des.patch
-URL:		http://www.openswan.org/
+URL:		https://libreswan.org/
 BuildRequires:	bison
+BuildRequires:	curl-devel
 BuildRequires:	docbook-dtd412-xml
 BuildRequires:	flex
-BuildRequires:	gmp-devel
+BuildRequires:	libcap-ng-devel
+BuildRequires:	libevent-devel >= 2
+BuildRequires:	libselinux-devel
+BuildRequires:	nss-devel >= 3
+BuildRequires:	nspr-devel >= 4
+BuildRequires:	pam-devel
 BuildRequires:	perl-tools-pod
+BuildRequires:	pkgconfig
 BuildRequires:	rpmbuild(macros) >= 1.268
 BuildRequires:	sed >= 4.0
+BuildRequires:	unbound-devel
 BuildRequires:	which
 BuildRequires:	xmlto
 Requires(post,preun):	/sbin/chkconfig
 Requires:	bash
+Requires:	iproute2
+Requires:	iptables
 Requires:	rc-scripts
 Provides:	freeswan
+Provides:	openswan
 Obsoletes:	freeswan
 Obsoletes:	ipsec-tools
+Obsoletes:	openswan
 Obsoletes:	strongswan
 BuildRoot:	%{tmpdir}/%{name}-%{version}-root-%(id -u -n)
 
 %description
-Openswan is an Open Source implementation of IPsec for the Linux 2.6.x
-operating system. Is it a code fork of the FreeS/WAN project, started
-by a few of the developers who were growing frustrated with the
-politics surrounding the FreeS/WAN project.
+Libreswan is an IPsec implementation for Linux. It has support for
+most of the extensions (RFC + IETF drafts) related to IPsec, including
+IKEv2, X.509 Digital Certificates, NAT Traversal, and many others.
+Libreswan uses the native Linux IPsec stack (NETKEY/XFRM) per default,
+but may also use the alternative Libreswan kernel IPsec stack (KLIPS).
+
+Libreswan was forked from Openswan 2.6.38, which was forked from
+FreeS/WAN 2.04.
 
 %description -l pl.UTF-8
-Openswan to otwarta implementacja IPseca dla systemu operacyjnego
-Linux 2.6.x. Jest to odgałęzienie kodu z projektu FreeS/WAN,
-rozpoczęte przez kilku programistów coraz bardziej sfrustrowanych
-polityką otaczającą projekt FreeS/WAN.
+Libreswan to implementacja standardu IPsec dla Linuksa. Obsługuje
+większość rozszerzeń IPseca (RFC + szkice IETF), w tym IKEv2,
+certyfikaty X.509, przechodzenie NAT i wiele innych. Libreswan
+wykorzystuje domyślnie natywny stos IPsec Linuksa (NETKEY/XFRM),
+ale może używać też alternatywnego (KLIPS).
+
+Libreswan wywodzi się z projektu Openswan w wersji 2.6.38, który z
+kolei wywodzi się z projektu FreeS/WAN w wersji 2.04.
 
 %prep
 %setup -q
-%patch0 -p1
-%patch1 -p1
+#patch0 -p1
+#patch1 -p1
 
-%{__sed} -i -e 's#/lib/ipsec#/%{_lib}/ipsec#g#' Makefile Makefile.inc
+#%{__sed} -i -e 's#/lib/ipsec#/%{_lib}/ipsec#g#' Makefile Makefile.inc
 
 %build
 USE_WEAKSTUFF=true \
 USE_NOCRYPTO=true \
 %{__make} -j1 programs \
 	CC="%{__cc}" \
+	INC_USRLOCAL=%{_prefix} \
+	FINALLIBEXECDIR=%{_libdir}/ipsec \
+	MANTREE=%{_mandir} \
 	USERCOMPILE="%{rpmcflags}" \
 	IPSECVERSION=%{version}
 
@@ -73,22 +94,16 @@ install -d $RPM_BUILD_ROOT{/etc/rc.d/init.d,/var/run/pluto}
 
 %{__make} install \
 	DESTDIR=$RPM_BUILD_ROOT \
+	INC_USRLOCAL=%{_prefix} \
+	FINALLIBEXECDIR=%{_libdir}/ipsec \
+	MANTREE=$RPM_BUILD_ROOT%{_mandir} \
 	IPSECVERSION=%{version}
 
 install %{SOURCE1} $RPM_BUILD_ROOT/etc/rc.d/init.d/ipsec
 %{__sed} -i -e "s#/lib/ipsec#/%{_lib}/ipsec#g#" $RPM_BUILD_ROOT/etc/rc.d/init.d/ipsec
 
-for l in `find $RPM_BUILD_ROOT%{_mandir}/man3 -type l` ; do
-	d=`readlink $l`
-	rm -f $l
-	echo ".so $d" > $l
-done
-
-# API not exported - kill for now
-%{__rm} -r $RPM_BUILD_ROOT%{_mandir}/man3
-
 install -d $RPM_BUILD_ROOT%{systemdtmpfilesdir}
-cat >$RPM_BUILD_ROOT%{systemdtmpfilesdir}/openswan.conf <<EOF
+cat >$RPM_BUILD_ROOT%{systemdtmpfilesdir}/libreswan.conf <<EOF
 d /var/run/pluto 0755 root root -
 EOF
 
@@ -107,41 +122,28 @@ fi
 
 %files
 %defattr(644,root,root,755)
-%doc BUGS CHANGES CREDITS LICENSE README
+%doc CHANGES CREDITS LICENSE README* TRADEMARK
 %attr(755,root,root) %{_sbindir}/ipsec
 %dir %{_libdir}/ipsec
 %attr(755,root,root) %{_libdir}/ipsec/*
 %attr(754,root,root) /etc/rc.d/init.d/ipsec
+%config(noreplace) %verify(not md5 mtime size) /etc/sysconfig/pluto
 %config(noreplace) %verify(not md5 mtime size) %{_sysconfdir}/ipsec.conf
+%config(noreplace) %verify(not md5 mtime size) %{_sysconfdir}/ipsec.secrets
 %dir %{_sysconfdir}/ipsec.d
-%config(noreplace) %verify(not md5 mtime size) %{_sysconfdir}/ipsec.d/hub-spoke.conf
-%config(noreplace) %verify(not md5 mtime size) %{_sysconfdir}/ipsec.d/ipv6.conf
-%config(noreplace) %verify(not md5 mtime size) %{_sysconfdir}/ipsec.d/l2tp-cert.conf
-%config(noreplace) %verify(not md5 mtime size) %{_sysconfdir}/ipsec.d/l2tp-psk.conf
-%config(noreplace) %verify(not md5 mtime size) %{_sysconfdir}/ipsec.d/linux-linux.conf
-%config(noreplace) %verify(not md5 mtime size) %{_sysconfdir}/ipsec.d/mast-l2tp-psk.conf
-%config(noreplace) %verify(not md5 mtime size) %{_sysconfdir}/ipsec.d/oe-exclude-dns.conf
-%config(noreplace) %verify(not md5 mtime size) %{_sysconfdir}/ipsec.d/sysctl.conf
-%config(noreplace) %verify(not md5 mtime size) %{_sysconfdir}/ipsec.d/xauth.conf
-%dir %{_sysconfdir}/ipsec.d/aacerts
-%dir %{_sysconfdir}/ipsec.d/cacerts
-%dir %{_sysconfdir}/ipsec.d/certs
-%dir %{_sysconfdir}/ipsec.d/crls
-%dir %{_sysconfdir}/ipsec.d/ocspcerts
+%config(noreplace) %verify(not md5 mtime size) %{_sysconfdir}/ipsec.d/v6neighbor-hole.conf
 %dir %{_sysconfdir}/ipsec.d/policies
 %config(noreplace) %verify(not md5 mtime size) %{_sysconfdir}/ipsec.d/policies/block
 %config(noreplace) %verify(not md5 mtime size) %{_sysconfdir}/ipsec.d/policies/clear
 %config(noreplace) %verify(not md5 mtime size) %{_sysconfdir}/ipsec.d/policies/clear-or-private
 %config(noreplace) %verify(not md5 mtime size) %{_sysconfdir}/ipsec.d/policies/private
 %config(noreplace) %verify(not md5 mtime size) %{_sysconfdir}/ipsec.d/policies/private-or-clear
-%dir %{_sysconfdir}/ipsec.d/private
+%config(noreplace) %verify(not md5 mtime size) /etc/pam.d/pluto
 %dir /var/run/pluto
-%{systemdtmpfilesdir}/openswan.conf
+%{systemdtmpfilesdir}/libreswan.conf
 %{_mandir}/man5/ipsec.conf.5*
 %{_mandir}/man5/ipsec.secrets.5*
 %{_mandir}/man5/ipsec_*.5*
 %{_mandir}/man8/ipsec.8*
 %{_mandir}/man8/ipsec_*.8*
-
-# devel docs (but no devel libs)
-#%{_mandir}/man3/ipsec_*.3*
+%{_mandir}/man8/pluto.8*
