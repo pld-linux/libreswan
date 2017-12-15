@@ -12,13 +12,14 @@
 Summary:	Open Source implementation of IPsec for the Linux operating system
 Summary(pl.UTF-8):	Otwarta implementacja IPseca dla systemu operacyjnego Linux
 Name:		libreswan
-Version:	3.17
+Version:	3.22
 Release:	0.1
 License:	GPL v2 with linking permission, BSD (DES and radij code)
 Group:		Networking/Daemons
 Source0:	https://download.libreswan.org/%{name}-%{version}.tar.gz
-# Source0-md5:	a37ce71229d491f30926788565f82e16
+# Source0-md5:	27a3fdcad3fa6c8083f2037a267aa01e
 Source1:	%{name}.init
+Patch0:		%{name}-gawk.patch
 URL:		https://libreswan.org/
 BuildRequires:	bison
 BuildRequires:	curl-devel
@@ -72,10 +73,7 @@ kolei wywodzi się z projektu FreeS/WAN w wersji 2.04.
 
 %prep
 %setup -q
-#patch0 -p1
-#patch1 -p1
-
-#%{__sed} -i -e 's#/lib/ipsec#/%{_lib}/ipsec#g#' Makefile Makefile.inc
+%patch0 -p1
 
 %build
 USE_WEAKSTUFF=true \
@@ -83,7 +81,7 @@ USE_NOCRYPTO=true \
 %{__make} -j1 programs \
 	CC="%{__cc}" \
 	INC_USRLOCAL=%{_prefix} \
-	FINALLIBEXECDIR=%{_libdir}/ipsec \
+	FINALLIBEXECDIR=%{_libexecdir}/ipsec \
 	MANTREE=%{_mandir} \
 	USERCOMPILE="%{rpmcflags}" \
 	IPSECVERSION=%{version}
@@ -95,7 +93,7 @@ install -d $RPM_BUILD_ROOT{/etc/rc.d/init.d,/var/run/pluto}
 %{__make} install \
 	DESTDIR=$RPM_BUILD_ROOT \
 	INC_USRLOCAL=%{_prefix} \
-	FINALLIBEXECDIR=%{_libdir}/ipsec \
+	FINALLIBEXECDIR=%{_libexecdir}/ipsec \
 	MANTREE=$RPM_BUILD_ROOT%{_mandir} \
 	IPSECVERSION=%{version}
 
@@ -124,14 +122,13 @@ fi
 %defattr(644,root,root,755)
 %doc CHANGES CREDITS LICENSE README* TRADEMARK
 %attr(755,root,root) %{_sbindir}/ipsec
-%dir %{_libdir}/ipsec
-%attr(755,root,root) %{_libdir}/ipsec/*
+%dir %{_libexecdir}/ipsec
+%attr(755,root,root) %{_libexecdir}/ipsec/*
 %attr(754,root,root) /etc/rc.d/init.d/ipsec
 %config(noreplace) %verify(not md5 mtime size) /etc/sysconfig/pluto
 %config(noreplace) %verify(not md5 mtime size) %{_sysconfdir}/ipsec.conf
 %config(noreplace) %verify(not md5 mtime size) %{_sysconfdir}/ipsec.secrets
 %dir %{_sysconfdir}/ipsec.d
-%config(noreplace) %verify(not md5 mtime size) %{_sysconfdir}/ipsec.d/v6neighbor-hole.conf
 %dir %{_sysconfdir}/ipsec.d/policies
 %config(noreplace) %verify(not md5 mtime size) %{_sysconfdir}/ipsec.d/policies/block
 %config(noreplace) %verify(not md5 mtime size) %{_sysconfdir}/ipsec.d/policies/clear
