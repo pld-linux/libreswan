@@ -1,5 +1,5 @@
 # TODO:
-# - libreswan.init needs update for 2.6.x and above
+# - libreswan.init needs update (since openswan 2.6.x)
 # - warning: Installed (but unpackaged) file(s) found:
 #   /usr/share/doc/libreswan/index.html
 #   /usr/share/doc/libreswan/ipsec.conf-sample
@@ -12,12 +12,12 @@
 Summary:	Open Source implementation of IPsec for the Linux operating system
 Summary(pl.UTF-8):	Otwarta implementacja IPseca dla systemu operacyjnego Linux
 Name:		libreswan
-Version:	3.22
+Version:	3.23
 Release:	0.1
 License:	GPL v2 with linking permission, BSD (DES and radij code)
 Group:		Networking/Daemons
 Source0:	https://download.libreswan.org/%{name}-%{version}.tar.gz
-# Source0-md5:	27a3fdcad3fa6c8083f2037a267aa01e
+# Source0-md5:	ad6e6715cd01c143a4501f933c044a88
 Source1:	%{name}.init
 Patch0:		%{name}-gawk.patch
 URL:		https://libreswan.org/
